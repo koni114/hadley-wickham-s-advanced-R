@@ -41,7 +41,7 @@ y[c("d", "c", "a")]
 # 1. 다중 벡터, 2. 단일 벡터, 3. 매트릭스
 
 # 각 차원 위치에 1차원 인덱스를 넣음으로써 서브세팅 가능
-# black subsetting은 모든 행과 열을 유지할 수 있기 때문에 유용
+# blank subsetting은 모든 행과 열을 유지할 수 있기 때문에 유용
 
 a           <- matrix(1:9, nrow = 3)
 colnames(a) <- c("A", "B", "C")
