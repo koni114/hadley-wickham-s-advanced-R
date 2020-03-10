@@ -123,6 +123,9 @@ diag2 <- function(x){
 # is.na(df)는 matrix 형태의 logical 형태로 return
 # 따라서 결측인 위치의 값들이 return 됨
 
+is.na(iris) # logical vector로 return 됨
+
+
 ## -- 서브세팅 연산자 -- ## ----
 # [[ 와 $ 두가지가 존재
 
