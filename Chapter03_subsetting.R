@@ -1,4 +1,4 @@
-# function 요약 
+# chapter03. subsetting
 # setNames, outer, upper.tri(하삼각행렬함수)
 
 # chapter 3  : subsetting ----
