@@ -53,6 +53,28 @@ switch 구문을 사용하여 디스패치가 발생(switch(TYPEOF(x)))
 * S4 객체는 특수한 베이스 타입을 사용
 * RC 객체는 S4와 환경의 결합
 
+### 7.2 S3
+* S3는 R의 가장 간단한 OO 시스템
+* S3는 base 패키지와 stats 패키지에서 사용된 유일한 OO 시스템
+
+#### 7.2.1 객체 인식, 제너릭 함수, 메소드
+* base R에서 어떤 객체가 S3 인지를 쉽게 확인 할 수 있는 방법은 없음  
+가장 근접한 방법은 is.object(x) & !isS4(x) 를 사용하는 것
+* 보다 쉬운 방법은 pryr::otype() 을 사용하는 것
+~~~
+library(pryr)
+
+df <- data.frame(x = 1:10, y = letters[1:10])
+otype(df) dataFrame은 S3 Class
+
+otype(df$x)  # 수치형 백터는 S3 클래스가 아님
+
+otype(df$y) # 벡터는 S3 클래스
+~~~
+* S3에서 메소드는 제너릭(generic)이라고 불리는 함수에 속함
+* S3 메소드는 객체나 클래스에 속하지 않음
+*
+
 
 
 
