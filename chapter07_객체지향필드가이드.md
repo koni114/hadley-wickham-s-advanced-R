@@ -1,217 +1,314 @@
-## chapter07 객체지향 필드 가이드
-* R의 객체를 인식하고 작업하는 필드 가이드
-* R의 세 가지 객체지향 시스템(Object-function OO)은 클래스와 메소드가 정의되는 방법에 따라 다름
-
-##### S3
-  * S3는 generic-function 이라고 불리는 OO 프로그래밍 스타일을 구현
-  * Java, C++과 같은 Message-passing OO를 구현한 다른 프로그래밍 언어와는 다름
-    * 메소드가 객체에 전달되고, 메소드를 전달받은 그 객체가 어느 함수를 호출할지 판단
-    * 이러한 객체는 메소드 이름 앞에 나타남 ex) 객체.메소드("blue", "aa")
-  * S3는 계산이 메소드를 통해 수행되는 동안  
-  generic function이 어떤 메소드에 매칭시킬지 찾음
-    * ex) 메소드(객체, "blue")
-  * S3는 매우 유연한 시스템이며, 클래스에 대한 형식적인 정의가 없음
-
-##### S4
-* S4는 S3 보다 형식적임
-* S4는 형식적인 클래스 정의를 가지고 있는데, 각 클래스에 대한 표현(representation)과 상속(inheritance)을 기술
-* 제너릭과 메소드를 정의하는 데 도움을 주는 특별한 함수를 갖고 있음
-* S4는 multiple dispatch도 가지고 있음
-  * dispatch : 프로그램이 어떤 메소드를 호출할 것인가를 결정하여 그것을 실행하는 과정
-
-##### RC
-* 메세지-패싱 OO을 구현한 것으로, 함수가 아니라 클래스에 메소드가 따름
-* 함수가 아니라 클래스에 메소드가 따름
-* &#36;는 객체와 메소드를 구분하는데 사용. 메소드 호출은 canvas$drawRect("blue")와 같은 모양
-
-##### base type
-* 객체 지향은 아니지만, 언급해야 할 중요한 시스템
-* base type은 다른 OO 시스템의 기본이 되는 C 수준 내부 타입
+# chapter07 객체지향 필드 가이드
+- R의 객체를 인식하고 작업하는 필드 가이드
+- 이 장의 목표는 네 가지 시스템에 대한 전문가가 되도록 하는 것이 아니라, 사용자가 어느 시스템으로 작업하고 있는지를 식별하고, 이를 효과적을 사용할 수 있도록 돕는데 있음
+- R의 세 가지 객체지향 시스템(Object-function OO)은 클래스와 메소드가 정의되는 방법에 따라 다름
+- 다음 절은 베이스 타입에서 시작하여 각 시스템을 순서대로 설명함
+- 어떤 객체가 속해 있는 OO 시스템을 인식하는 방법, 메소드 디스패치가 동작하는 방법, 새로운 객체, 클래스, 제너릭, 메소드를 해당 시스템에 따라 생성하는 방법을 공부하게 될 것임
 
 
-### 7.1 base type
-* 모든 베이스 R 객체에는 그 객체가 메모리에 저장되는 방법을 기술하는 C 구조체(structure, struc)가 있음
-* 구조체는 메모리 관리에 필요한 정보인 type(R 객체의 base type)을 포함
-* base type은 R 코어팀만 생성할 수 있기 때문에 새로운 base type은 잘 추가되지 않음
-* base type은 atomic vector나 list 같은 기본적인 base type도 있지만 함수, 환경 등 특이한 객체들도 포함되어 있음
-* 객체의 base type은 typeof()로 판단 가능
-* base type의 이름은 R을 통틀어 일관되게 사용되지 않아 타입과 이에 대응하는 is 함수는 다른 이름을 사용할 수 있음
-~~~
-함수 타입은 클로저
-f <- function(){}
+### S3
+- S3는 <b>제너릭-함수 OO(generic-function OO)</b>라고 불리는 OO 프로그래밍 스타일을 구현함
+- 이것은 Java, C++, C# 등과 같은 <b>메세지-패싱 OO</b>를 구현한 다른 프로그래밍 언어와는 다름
+- 메세지-패싱에서는 메세지가 객체에 전달되고, 메세지를 전달받은 객체가 어느 함수를 호출할지 판단함  
+이런 객체는 보통 `메소드/메세지`의 이름 앞에 나타나는 특별한 모습을 가짐
+  - ex) `canvas.drawRect("blue")`
+- <b>하지만 S3 객체는 다른데, </b> 계산이 메소드를 통해 수행되는 동안, <b>제너릭 함수</b>라고 불리우는 특수한 유형의 함수가 어느 메소드를 호출할 지 선택
+  - ex) `drawRect(canvas, "blue")`
+- S3는 매우 유연한 시스템이며, 클래스에 대한 형식적인 정의가 없음
+
+### S4
+- S4는 S3와 유사하게 동작하지만 보다 형식적임
+- S3와는 두 개의 중요한 차이가 존재
+- S4는 형식적 클래스 정의를 갖고 있는데, 그것은 각 클래스에 대한 <b>표현(representation)</b>과 <b>상속(inheritance)</b>을 기술하고, 제너릭과 메소드를 정의하는데 도움을 주는 특별한 함수를 갖고 있음
+- S4는 <b>다중 디스패치(multiple dispatch)</b>도 갖고 있는데, 이는 제너릭 함수가 여러 개의 인자를 가지는 클래스에 기반을 두고 메소드를 선택할 수 있다는 것을 의미함 
+
+### RC(referene class)
+- RC라고 하는 <b>참조 클래스</b>는 S3나 S4와 많이 다름
+- RC는 메세지-패싱 OO를 구현한 것으로, 함수가 아니라 클래스에 메소드가 따름
+- $는 객체와 메소드를 구분하는 데 사용되므로 메소드 호출은 `canvas$drawRect("blue")`와 같은 모양
+- 또한 RC 객체는 가변적이기 때문에 R의 일반적인 수정-후-복사 시맨틱스를 사용하지 않고, 그 자리에서 바로 수정함
+- 이것은 그 원인을 알아내기는 어렵지만, S3와 S4로 해결하기 어려운 문제를 풀 수 있도록 함
+
+### base types
+- <b>베이스 타입</b>은 다른 OO 시스템의 기본이 되는 C 수준 내부 타입
+- 베이스 타입은 대부분 C 코드를 이용하여 조작하지만, 다른 OO 시스템을 구축하는 토대로 제공하므로 알아 두는 것이 좋음
+
+## 7.1  베이스 타입
+- 모든 베이스 R 객체에는 그 객체가 메모리에 저장되는 방법을 기술하는 <b>C 구조(또는 구조체 : structure or struct)</b>가 있음
+- 구조체는 메모리 관리에 필요한 정보인 객체의 내용과 여기에서 가장 중요하게 다루는 <b>타입(type)</b>을 포함하고 있음
+- 이 타입은 R 객체의 <b>베이스 타입</b>(base type)임
+  - ex) 원자 벡터, 리스트, 매트릭스, 어레이..등
+- 베이스 타입은 R 코어팀만 새로운 유형을 생성할 수 있기 때문에 실제로 객체 시스템은 아님
+- 결과적으로 새로운 베이스 타입은 거의 추가되지 않음
+- 가장 최근의 변화는 2011년에 이전의 R에서는 전혀 볼 수 없었지만 메모리 문제를 진단하는 데 유용한 두 가지의 색다른 타입을 추가 한 것(NEWSXP, FREESXP)
+- 마지막으로 추가된 타입은 2005년 S4에 대한 특별한 베이스 타입
+- 2장에서는 가장 공통적인 베이스 타입(ex)원자벡터, 리스트..)를 설명하지만 <b>베이스 타입은 함수, 환경, 이 책에서 나중에 배우게 될 이름, 호출 등 특이한 객체들도 포함하고 있음</b>
+- 객체의 베이스 타입은 `typeof()`로 판단할 수 있음
+- 베이스 타입의 이름은 R을 통틀어 일관되게 사용되지 않아 타입과 이에 대응하는 `is` 함수는 다른 이름을 사용할 수 있음 
+~~~r
+#- 함수 타입은 '클로저'임
+f <- function() {} 
+typeof(f)
+
+#> [1] "closure"
+
+#- 하지만 is 함수는 is.function이 TRUE로 return
 is.function(f)
+#> [1] TRUE
 
-원시 함수 타입은 builtin
-typeof는 bulitin 이지만, is.primitive를 사용하여 확인
-typof(sum)
+#- 원시 함수 타입은 `builtin`임
+typeof(sum)
+#> [1] "builtin"
+
+#- 하지만 is 함수는 is.primitive가 TRUE로 return
 is.primitive(sum)
+#> [1] TRUE
 ~~~
-* 서로 다른 베이스 타입에 따라 상이하게 동작하는 함수는 C로 쓰여져 있음  
-switch 구문을 사용하여 디스패치가 발생(switch(TYPEOF(x)))
-* C 코드를 작성해 본 적이 없더라도 모든 것이 그 위에 구축되어 있기 때문에 베이스 타입을 이해하는 것이 중요
-* S3 객체는 어떠한 base type 위에서도 구축 될 수 있음
-* S4 객체는 특수한 베이스 타입을 사용
-* RC 객체는 S4와 환경의 결합
+- 서로 다른 베이스 타입에 따라 상이하게 동작하는 함수는 거의 C로 쓰여져 있고, switch 구문(ex) switch(TYPEOF(x)))을 사용하여 디스패치가 발생
+- C 코드를 작성해 본 적이 없더라도 모든 것이 그 위에 구축되어 있기 때문에 <b>베이스 타입을 이해하는 것은 중요함</b> 
+- S3 객체는 어떤 베이스 타입 위에서도 구축될 수 있고, S4 객체는 특수한 베이스 타입을 사용하며, RC 객체는 S4와 환경의 결합
+- 어떤 객체가 순수한 베이스 타입인지 여부를 알고 싶다면, 즉 그 객체가 S3, S4, RC 행동을 갖고 있지 않는지 여부를 확인하고 싶다면 `is.Object(x)`가 FALSE를 반환하는지 확인
 
-### 7.2 S3
-* S3는 R의 가장 간단한 OO 시스템
-* S3는 base 패키지와 stats 패키지에서 사용된 유일한 OO 시스템
+## 7.2 S3
+- S3는 R의 가장 단순한 OO 시스템
+- S3는 base 패키지와 stats 패키지에서 사용된 유일한 OO 시스템
+- CRAN에 올라와 있는 패키지들에서 가장 공통적으로 사용된 시스템
+- S3는 임시적이며 비형식적이지만 그 자체로 미니멀리즘이 반영된 우아함을 가지고 있음
+- 즉, 사용자는 이 시스템의 어떤 부분도 분리해낼 수 없지만 여전히 유용한 OO 시스템을 가짐
 
-#### 7.2.1 객체 인식, 제너릭 함수, 메소드
-* base R에서 어떤 객체가 S3 인지를 쉽게 확인 할 수 있는 방법은 없음  
-가장 근접한 방법은 is.object(x) & !isS4(x) 를 사용하는 것
-* 보다 쉬운 방법은 pryr::otype() 을 사용하는 것
-~~~
-library(pryr)
+### 7.2.1 객체 인식, 제너릭 함수 그리고 메소드 
+- 마주하게 되는 대부분의 객체는 S3 객체
+- 그러나 불행하게도 <b>베이스 R</b>에서 어떤 객체가 S3 객체인지를 쉽게 확인할 수 있는 방법은 없음
+- 이에 가장 근접한 방법은 `is.obect(x) & ~isS4(x)` 를 이용하는 것
+- 더 쉬운 방법은 `pypr::otype()`을 사용하는 것
+~~~r
+library(pypr)
 
 df <- data.frame(x = 1:10, y = letters[1:10])
-otype(df) dataFrame은 S3 Class
+otype(df) #- 데이터 프레임은 S3 객체
+#> [1] "S3"
 
-otype(df$x)  # 수치형 백터는 S3 클래스가 아님
+otype(df$x) #- 수치형 벡터는 S3 클래스가 아님
+#> [1] "base"
 
-otype(df$y) # 벡터는 S3 클래스
+otype(df$y) #- 펙터는 S3 클래스
+#> [1] "S3"
 ~~~
-* S3에서 메소드는 제너릭(generic)이라고 불리는 함수에 속함
-* S3 메소드는 객체나 클래스에 속하지 않음
+- S3에서 메소드는 <b>제너릭 함수(generic function)</b> 또는 짧게 <b>제너릭(generics)</b>이라고 불리는 함수에 속함
+- <b>S3 메소드는 객체나 클래스에 속하지 않음</b>
+- 이것은 대부분의 다른 프로그래밍 언어와는 다르지만, OO 스타일이라고 불리우는 데 부족함은 없음
+- 어떤 함수가 S3 제너릭인지 판단하기 위해 `UseMethod()` 호출에 대한 소스 코드를 조사해 볼 수 있음
+- 즉, 이 함수는 호출에 대한 올바른 메소드, 즉 <b>메소드 디스패치(method dispatch)</b> 과정을 알아내는 함수
+- `pryr`은 `otype()`과 유사하게 특정 함수와 객체 시스템이 관련되어 있을 때 그 관련 있는 객체를 설명하는 `ftype()` 이라는 함수도 제공
+~~~r
+mean
 
-##### generic method
-* S3에서 method는 제너릭 함수(generic function)에 속함
-* 넓이를 계산해주는 메소드 area()가 있다고 할 때, rectangle, circle class가 input으로 들어왔을 때 계산 방법은 각각 다름
-* 이 때 area function을 generic function 이라고 하며, 이때 area function은 적절한 method를 dispatch 해줌
-~~~
-area.rectangle <- function(x, ...) {
-  as.numeric((x["xright"] - x["xleft"]) * (x["ytop"] - x["ybottom"]))
-}
+#> function (x, ...)
+#> UseMethod("mean")
+#> <bytecode: 0x21b6ea8>
+#> <environment: namespace:base>
 
-area.circle <- function(x, ...) {
-  pi * x$radius^2
-}
+ftype(mean)
+#> [1] "s3"      "generic"
 ~~~
-* dot(.)을 이용해서 method를 표기하기 때문에 함수명에 dot(.)은 쓰지 않음
-* pryr::ftype()를 이용해서 함수가 S3 메소드인지 제너릭인지 확인 가능
+- `[`, `sum()`, `cbind()`와 같은 어떤 S3 제너릭은 C로 구현되어 있기 때문에 `UseMethod()`를 호출하지 않음
+- 대신에 이들 함수는 `DispatchGroup()` 또는 `DispatchOrEval()`이라는 C로 작성된 함수를 호출
+- C 코드에서 메소드 디스패치를 실행하는 함수는 <b>내부 제너릭(internal generics)</b>이라고 부르며, 내부 제너릭 도움말 문서에 설명되어 있음
+- `ftype()`은 이런 특별한 경우에 대한 정보를 제공
+- 어떤 클래스가 주어졌다면 S3 제너릭의 역할은 올바른 S3 메서드를 호출하는 것
+- 특정 규칙의 이름으로 선언함으로서 S3 메소드를 인식할 수 있는데, `generic.class()` 같은 형태로 나타남
+- 예를 들어, `mean()` 제너릭에 대한 `Date` 메소드는 `mean.Date()` 라고 하고, `print()`에 대한 `factor` 메소드는 `print.factor()` 라고 함
+- 이것이 최근의 스타일 가이드가 함수 이름에 '.'의 사용을 권하지 않는 이유
+- '.'이 함수를 S3 메소드처럼 보이게 하기 때문
+- 예를 들면, `t.test()`가 t 객체에 대한 test 메소드인가? 이와 유사하게 클래스 이름에서 '.'를 사용하는 것이 혼란스러울 수 있음
+- `print.data.frame()`이 `data.frame()`의 `print()` 메소드인가? 아니면 `frames()`에 대한 `print.data` 메소드인가? 
+- `pryr::ftype()`은 이런 예외사항을 알고 있으므로 어떤 함수가 S3 메소드인지 아니면 제너릭인지를 알아내기 위해 사용할 수 있음
+~~~r
+ftype(t.data.frame) #- t()에 대한 data.frame 메소드
+#> [1] "s3" "method"
+
+ftype(t.test)       #- t 검정에 대한 제너릭 함수
+#> [1] "s3" "generic"
 ~~~
-ftype(t.data.frame) # t()에 대한 data.frame 메소드
-ftype(t.test) # t검정에 대한 제너릭 함수
-~~~
-* methods()를 이용하면 제너릭에 속한 모든 메소드를 볼 수 있음
-~~~
+- `methods()`를 이용하면 제너릭에 속하는 모든 메소드를 볼 수 있음
+~~~r
 methods("mean")
+#> [1] mean.Date     mean.default  mean.difftime mean.POSIXct  mean.POSIXlt 
+
 methods("t.test")
+#> [1] t.test.default* t.test.formula*
+~~~ 
+- 대부분의 S3 메소드는 base 패키지의 정의되어 있는 메소드와는 달리 별도로 소스코드를 바로 보기가 힘듬. 따라서 해당 소스 코드를 읽으려면 `getS3Method()`를 사용해야 함
+- 주어진 클래스에 대한 메소드를 가지는 모든 제너릭을 나열할 수도 있음
+~~~r
+methods(class = "ts")
 ~~~
 
-#### 7.2.2 클래스를 정의하고 객체 생성하기
-* S3는 간단하고 임시적인 시스템이므로 형식적 정의가 없음
-* S3 클래스의 객체 생성 방법은 기존의 베이스 객체를 취한 후 class 속성을 설정하면 됨
-~~~
-foo <- structure(list(), class = " foo") # 한번에 클래스를 생성하고 할당
-foo <- list() # 클래스를 생성하고 난 후 설정
+### 7.2.2 클래스를 정의하고 객체 생성하기
+- S3는 간단하고 형식적인 시스템임. 즉 클래스에 대한 형식적 정의가 없음
+- 클래스의 인스턴스인 객체를 만들기 위해 기존의 베이스 객체를 취한 후 클래스 속성을 설정하기만 하면 됨
+- 이런 작업은 `structure()`로 생성 중에 하거나 `class<-()` 이후에 할 수 있음
+~~~r
+# 한 번에 클래스를 생성하고 할당하기
+foo <- structure(list(), class = "foo")
+
+# 클래스를 생성하고 난 후 설정하기
+foo <- list()
 class(foo) <- "foo"
 ~~~
-* class(x)로 객체의 클래스를 판단할 수 있고, inherits(x, "classname")을 이용하여 객체가 특정 클래스를 상속했는지 알 수 있음
-~~~
+- <b>S3 객체는 일반적으로 리스트나 속성을 가진 원자 벡터 위에 구축 됨</b>
+- 함수를 S3 객체로 만들 수도 있음. 다른 베이스 타입은 R에서 거의 볼 수 없거나 속성과는 잘 다루지 않는 일반적이지 않는 시맨틱스임
+- `class(x)`를 이용하여 어떤 객체의 클래스를 판단할 수 있고,     
+`inherits(x, "classname")`를 이용하여 어떤 객체가 특정 클래스를 상속했는지 알 수 있음 
+~~~r
 class(foo)
+#> [1] "foo"
+
 inherits(foo, "foo")
+#> [1] TRUE
 ~~~
-* 대부분의 S3 클래스는 생성자 함수(constructor functions)를 제공
-~~~
+- S3 객체의 클래스는 벡터일 수도 있음
+- 예를 들어, `glm()` 객체의 클래스는 `c("glm", "lm")` 임
+- 클래스 이름은 일반적으로 소문자를 사용하며, '.'를 피해야 함
+- 그렇지 않으면 복수 단어 클래스 이름에 밑줄(ex) my_class)이나 CamelCase 중 어느 것을 사용할지 혼란스러워짐
+- 대부분의 S3 클래스는 <b>생성자 함수(constructor functions)</b>를 제공
+~~~r
 foo <- function(x){
-  if (!is.numeric(x))stop("X must be numeric")
+  if (!is.numeric(x)) stop("X must be numeric")
   structure(list(x), class = "foo")
 }
-~~~
-* 개발자가 제공한 생성자 함수와는 별도로, S3는 정확성을 체크하지 않음  
-즉, 기존 객체의 클래스를 변경할 수 있음
-* 왠만해서는 그런 짓은 하지 않음
+~~~ 
+- 가능한 한 이 생성자 함수를 사용해야 함
+- 생성자 함수를 사용하면 올바른 요소로 클래스를 명확하게 생성할 수 있음
+- 생성자 함수는 일반적으로 클래스 명과 동일한 이름을 가지고 있음 
+- 개발자가 제공한 생성자 함수와는 별도로 S3는 정확성을 체크하지 않음. 이것은 기존 객체의 클래스를 변경할 수 있다는 의미
+~~~r
+# 선형 모형 생성
+mod <- lm(log(mpg) ~ log(disp), data = mtcars)
+class(mod)
+#> [1] "lm"
 
-#### 7.2.3 새로운 메소드와 제너릭 생성하기
-* 새로운 재너릭을 생성하기 위해 UseMethod 사용
-* UseMethod에는 제너릭 함수의 이름, 메소드 디스패치에 사용하기 위한 인자를 취함
-* 두 번째 인자를 생략하면 함수의 첫 번째 인자에 디스패치함
-* 메소드를 정의하여 제너릭을 유용하게 사용
+print(mod)
+#> Call:
+#> lm(formula = log(mpg) ~ log(disp), data = mtcars)
+
+#> Coefficients:
+#> (Intercept)    log(disp)  
+#>     5.3810      -0.4586  
+
+# class에 data.frame 삽입하기(?!)
+class(mod) <- "data.frame"
+
+#- 그러나 이것은 잘 동작하지 않음을 알 수 있음
+#- 중요한 것은 S3는 정확성을 체크하지 않기 때문에 따로 error가 발생하지 않음
+
+print(mod)
+#> [1] coefficients  residuals     effects       rank          fitted.values assign        #> qr            df.residual   xlevels       call          terms        
+#> [12] model        
+#> <0 행> <또는 row.names의 길이가 0입니다>
+
+# 그러나 데이터는 여전히 있음
+mod$coefficient
+#> (Intercept)  log(disp) 
+#> 5.3809725    -0.4585683 
 ~~~
-f <- function(x) UseMethod("f") # 제너릭 정의
-f.a <- function(x) "class a"
+- 이런 유연성은 문제를 일으키지 않지만, 객체의 유형을 변경할 수 있다고 할지라도 절대 해서는 안됨!
+
+### 7.2.3 새로운 메소드와 제너릭 생성하기
+- 새로운 제너릭을 추가하기 위해 `UseMethod()`를 호출하는 함수를 생성해 보자
+- `UseMethod()`는 제너릭 함수의 이름과 메소드 디스패치에 사용하기 위한 인자를 취함
+- 두 번째 인자를 생략하면 함수의 첫 번째 인자에 디스패치함
+- 제너릭 인자의 어떤 것들도 `UseMethod()`에 전달될 필요가 없음
+- `UseMethod()`는 그 자체로 인자들을 찾기 위해 알 수 없는 마법 같은 방법을 사용
+~~~r
+#- f라고 하는 제너릭 함수 선언.
+#- f.class 라고 하는 S3 메소드를 선언하여 응용 할 수 있음
+f <- function(x) UseMethod("f")
+~~~ 
+- 제너릭 함수는 메소드가 없으면 유용하지 않음.   
+  메소드를 추가하려면 정확한(`generic.class`) 이름으로 정규 함수를 생성하면 됨
+~~~r
+f.a <- function(x) "Class a"
 a <- structure(list(), class = "a")
-class(a)
-f(a)
-~~~
+#> [1] "a"
 
-#### 7.2.4 메소드 디스패치
-* default 클래스는 알려지지 않은 클래스에 대한 폴백(fall back) 메소드 설정을 가능하게 함
+f(a)
+#> [1] "Class a"
 ~~~
+- 기존의 제너릭 함수에 메소드를 추가하면 다음과 같은 방법으로 동작
+~~~r
+mean.a <- function(x) "a"
+mean(a)
+#> [1]  a
+~~~
+- 위에서 볼 수 있는 것과 같이 메소드는 제너릭과 호환되는 클래스를 반환하는지의 여부를 확인하지 않음
+- 직접 생성한 메소드가 기존 코드의 예상과 다르지 않은지 확인하는 것은 사용자의 몫
+
+### 7.2.4 메소드 디스패치
+- S3 메소드 디스패치는 상대적으로 간단함
+- `UseMethod()`는 `paste0("generic", ".", c(class(x), "default"))` 처럼 함수 이름 벡터를 생성한 후 각각을 순서대로 탐색
+- `default` 클래스는 다른 알려지지 않은 클래스에 대한 폴백(fallback) 메소드 설정을 가능하게 함
+~~~r
 f <- function(x) UseMethod("f")
 f.a <- function(x) "Class a"
 f.default <- function(x) "Unknown class"
 
-f(structure(list(), class = c("a", "b")))  # b 클래스에 대한 메소드가 없으므로, a 클래스에 대한 메소드 사용
-f(structure(list(), class = c("c"))) # c 클래스는 없으므로, default 적용
+f(structure(list(), class = "a"))
+#> [1] "Class a"
+
+# b 클래스에 대한 메소드가 없으므로 a 클래스에 대한 메소드를 사용
+f(structure(list(), class = c("b", "a")))
+
+# c 클래스에 대한 메소드가 없으므로 기본값으로 돌아감
+f(structure(list(), class = "c"))
+#> [1] "Unknown class"
 ~~~
-* 그룹 제너릭은 하나의 함수로 복수의 제너릭에 대한 메소드 구현을 가능하게 함
-* ex) Math, Ops, Summary, Complex 와 같은 그룹 제너릭은 실제 함수가 아니라, 함수 그룹을 나타내는 것임을 인식하는 것을 반드시 인지해야 함
-
-### 7.3 S4
-* S4는 S3와 비슷하게 동작하지만, 다음과 같은 차이가 존재
-  * 클래스는 필드와 상속 구조를 설명하는 형식적 정의 존재
-  * 메소드 디스패치는 제너릭 함수에 대해 단 하나의 인자가 아니라 복수 인자에 기초
-  * S4 객체로부터 slot(필드라고 함)을 추출하기 위한 @이라는 특별한 연산자 존재
-* S4와 관련된 코드는 methods package에 저장
-* 배치 모드에서 R을 실행할 때 사용할 수 없음. S4를 사용할 때 마다 명시적으로 library(methods) 포함하자
-
-
-#### 7.3.1 객체, 제너릭 함수, 메소드의 인식
-* S4의 객체, 제너릭, 메소드는 인식하기 쉬움
-* isS4() : TRUE 반환시, pryr::otype() : S4 반환시 S4 객체 인식 가능
-* base 패키지에서는 S4가 존재하지 않으므로, 내장된 stat4 패키지에서 S4 객체를 생성하는 것으로 시작하자
+- 그룹 제너릭 메소드(group generic methods)는 약간 복잡도가 더해짐
+- 그룹 제너릭은 하나의 함수로 복수의 제너릭에 대한 메소드 구현을 가능하게 함
+- 네 개의 그룹 제너릭과 그것들이 포함하는 함수는 다음과 같음
+  - Math
+  - Ops
+  - Summary
+  - Complex
+- 그룹 제너릭은 고급 기법이여서 이 장의 범위를 벗어나지만, `groupGeneric` 문서에서 더 많은 내용을 찾아볼 수 있음
+- 여기서 알아야 할 가장 중요한 것은 `Math`, `Ops`, `Summary` 그리고 `Complex`는 실제 함수가 아니라 함수 그룹을 나타냄
+- 그룹 제너릭 함수 내부에서 특수한 변수인 `.Generic`이 호출된 실제 제너릭 함수를 제공한다는 점에 주의해야 함
+- 메소드는 일반적인 R 함수이기 때문에 그 메소드를 직접 호출할 수 있음
+~~~r
+c <- structure(list(), class = "c")
+f.default(c)
+#> [1] "Unknown class"
 ~~~
-library(stat4)
+- 그러나 객체의 클래스가 변경될수록 위험하므로 이렇게 해서는 안됨
+- 메소드를 직접 호출하는 이유는 성능 개선의 이유도 있는데, 다음에 좀 더 자세히 알아보자
+- S3가 아닌 객체로 S3 제너릭을 호출할 수 있음
+- 내부 S3 제너릭이 아닌 것들은 베이스 타입의 내재 클래 스(implicit class)에 디스패치됨
+- 베이스 타입의 내재 클래스를 판단하는 규칙은 다소 복잡하지만, 다음 함수에서 볼 수 있음
+~~~r
+iclass <- function(x){
+  if (is.Object(x)){
+    stop("x is not a primitive type", call = FALSE)
+  }
 
-y <- c(26, 17, 13, 12, 20, 5, 9, 8, 5, 4, 8)
-nLL <- function(lambda) - sum(dpois(y, lambda, log = TRUE))
-fit <- mle(nLL, start = list(lambda = 5), nobs = length(y))
-
-isS4(fit) # TRUE
-otype(fit) #  "S4"
-isS4(nobs) # S4 generic, TRUE
-ftype(nobs) # "s4", "generic"
+  c(
+    if (is.matrix(x)) "matrix",
+    if (is.array(x)  && is.matrix(x)) "array", 
+    if (is.double(x)) "double", 
+    if (is.integer(x)) "integer",
+    mode(x)
+  )
+}
 ~~~
-* 객체가 상속한 모든 클래스를 나열하기 위해 인자 하나와 함께 is()를 사용
-* 객체가 특정 클래스를 상속했는지 확인하기 위해 인자 2개 사용
-~~~
-is(fit)        # "mles"
-is(fit, "mle") # TRUE
-~~~
-* getGenerics()로 모든 S4 제너릭의 목록을 얻을 수 있음
-* getClasses()로 모든 S4 클래스의 목록을 얻을 수 있음
 
-#### 7.3.2 클래스 정의, 객체 생성하기
-* setClass()로 클래스의 표현 정의하고, new()로 새로운 객체 생성
-* S4 클래스는 세 가지 핵심적인 성질을 가지고 있음
-  * 이름(name): 관행적으로 S4 클래스 이름은 Upper CamelCase 사용
-  * 슬롯(slots)과 필드(fields) : ex) list(name = "character", age = "numeric") 처럼 표현 가능
-  * 상속받은 클래스를 전달하는 문자열(S4 용어로 contain 이라고 함). 고급 기법임!
-* slot과 contain에서 S4 class, setOldClass()로 등록된 S3 class, 베이스 타입의 내재 클래스를 사용할 수 있음
-* S4 클래스는 어떤 객체가 유효한지를 검증하는 validity 메소드와 기본 슬롯 값을 정의하는 prototype 객체처럼 선택적 속성을 가짐
-* 예제 - Person class와 이를 상속하는 Employee class 생성 예제
-~~~
-setClass("Person", slots = list(name = "character", age = "numeric"))
-setClass("Employee", slots = list(boss = "Person"), contains = "Person")
+## 용어 정리
+- 디스패치(dispatch)
+  - 프로그램이 어떤 메소드를 호출할 것인가를 결정하여 그것을 실행하는 과정을 말함
+- 폴백 메소드(fallback method)
+  - 메소드가 클래스에서 호출되었지만 그 메소드가 존재하지 않으면 이에 대응하기 위한  
+    일종의 백업 플랜으로 생각하면 됨
 
-alice <- new("Person", name = "Alice", age = 40)
-john <- new("Employee", name = "John", age = 20, boss = alice)
-~~~
-* 대부분의 S4 클래스는 클래스와 동일한 생성자 함수를 포함하고 있음. 생성자 함수가 이미 존재하고 있으면  new()를 직접 호출하지 말고 함수를 사용해라
-* S4 객체의 슬롯에 접근하려면 @, slot() 사용
-~~~
-alice@age
-slot(john, "boss")
-~~~
-* @는 $와 동일하며, slot() 은 [[]] 와 같음
-
-
-
-
-### 퀴즈 풀기
-* 객체가 관련되어 있는 OO 시스템이 무엇인지 어떻게 알 수 있는가?
-* 객체의 base type을 어떻게 판단하는가?
-* 제너릭 함수는 무엇인가?
-* S3와 S4의 주요 차이는 무엇인가? 그리고 S4와 RC의 주된 차이는 무엇인가?
+## Quiz
+1. 객체가 관련되어 있는 OO 시스템이 무엇인지 어떻게 알 수 있는가? 
+2. 객체의 베이스 타입을 어떻게 판단하는가? 
+3. 제너릭 함수는 무엇인가? 
+4. S3와 S4의 주요 차이는 무엇인가? 그리고 S4와 RC의 주된 차이는 무엇인가?  
