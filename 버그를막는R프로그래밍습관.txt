@@ -1,0 +1,30 @@
+# 1. 항상 유지형 subsetting을 생각하자
+- drop = F를 사용하고 있는가? 
+
+# 2. subsetting 할당시 특징 생각하기
+- 왼쪽/오른쪽 벡터의 길이는 같아야 함
+( number of items to replace is not a multiple of replacement length)
+- ** NA가 있는 논리형 인덱스는 결합할 수 있는데,
+  중요한 건 논리형 인덱스가 vector와 길이가 다르면 recycling되어 return 됨
+- 즉 논리형 vector로 subsetting을 하는 것이 좋음
+- 원본 객체(좌변객체)의 클래스와 구조를 유지하기 위해 [] 사용하기
+- dataFrame subsetting시, &&, || 가 아닌 & 와 |를 사용하자( ** 매우 중요) 
+- 정수 서브세팅보다 논리 서브세팅을 사용하자
+
+# 3. styleGuide
+- 파일은 반드시 의미가 있어야 하고 .R로 끝나야 함
+- 변수와 함수 이름은 반드시 소문자여야 함
+- 모든 삽입 연산자(=, +, -, <- 등) 주위에 여백(space) 사용
+- 항상 , 뒤에 여백 사용
+- 예외적으로 ::, ::: 는 여백 필요 X
+
+# 4. 적절한 rm 함수 사용하기
+- 기본적으로 전역적으로 많이 사용하는 명령어 projId, ModelId 등은
+  rm 함수를 통해 제거해줄 필요성이 있음
+
+# 5. R이 값을 찾는 방법 4가지
+- name masking : 함수가 선언 될 때 scope(지역변수, 전역변수)를 확정
+- functions vs variables :  함수와 변수의 접근 방법은 동일
+- a fresh start : 함수의 실행은 완벽하게 독립적
+- dynamic search : 값의 탐색은 함수가 선언될 때가 아니라 실행 될 때
+
