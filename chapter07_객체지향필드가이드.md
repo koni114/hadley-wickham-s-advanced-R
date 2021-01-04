@@ -300,9 +300,290 @@ iclass <- function(x){
 }
 ~~~
 
+## 7.3 S4
+- S4는 S3와 비슷하게 동작하지만, 형식성(formality)와 강건성(rigour)이 추가됨
+- 메소드는 여전히 클래스가 아니라 함수에 속하지만, 다음과 같은 차이가 있음
+  - 클래스는 그 필드와 상속 구조(부모 클래스)를 설명하는 형식적 정의를 가지고 있음
+  - 메소드 디스패치는 제너릭 함수에 대해 단 하나의 인자가 아니라 복수의 인자에 기초할 수 있음
+  - 어떤 S4 객체로부터 슬롯(필드라고도 함)을 추출하기 위한 @라는 특별한 연산자가 있음
+- 모든 S4와 관련된 코드는 `methods` 패키지에 저장되어 있음
+- 이 패키지는 인터랙티브하게 R을 사용할 때 사용할 수 있지만, 배치 모드에서 R을 실행할 때는 사용할 수 없음
+- 이 때문에 S4를 사용할 때마다 명시적으로 `library(methods)`를 포함하는 것이 좋음
+- S4는 풍부하고 복잡한 시스템임. 단 몇 페이지로 S4를 충분히 설명할 수 있는 방법은 없음
+
+### 7.3.1 객체, 제너릭 함수, 그리고 메소드의 인식
+- S4 객체, 제너릭 함수, 메소드를 인식하는 것은 어렵지 않음 `str()`이 형식적 클래스처럼 설명해 주기 때문에(`isS4()`는 TRUE를 반환하고 `pryr::otype()` 은 S4를 반환) S4 객체를 식별할 수 있음
+- S4 제너릭과 메소드도 구별하기 쉬운데, 그 이유는 잘 정의된 클래스의 S4 객체이기 때문
+- 공통적으로 사용된 base 패키지(stats, graphics, utils, datasets, base)에는 S4 클래스가 없으므로 내장된 <b>stats4</b> 패키지에서 S4 객체를 생성하는 것으로 시작
+- 이는 최대 가능도 추정과 관련된 S4 클래스와 메소드를 제공
+~~~r
+library(stats4)
+library(pryr)
+
+y <- c(26, 17, 13, 12, 20, 5, 9, 8, 5, 4, 8)
+nLL <- function(lambda) - sum(dpois(y, lambda, log = TRUE))
+fit <- mle(nLL, start = list(lambda = 5), nobs = length(y))
+
+#- S4 객체
+isS4(fit)
+#> [1] TRUE
+
+
+otype(fit)
+#> [1] "S4"
+
+# S4 제너릭
+isS4(nobs)
+
+#> [1] TRUE
+
+ftype(nobs)
+#> [1] "s4"  "generic"
+
+mle_nobs <- method_from_call(nobs(fit))
+isS4(mle_nobs)
+
+#> [1] TRUE
+
+ftype(mle_nobs)
+#> [1] "s4" "method"
+~~~
+- 객체가 상속한 모든 클래스를 나열하기 위해 인자 하나와 함께 `is()`를 사용해보라
+- 어떤 객체가 특정한 클래스를 상속했는지 확인하기 위해 인자 두 개와 함께 `is()` 사용
+~~~r
+is(fit)
+#> [1] "mle"
+
+is(fit, "mle")
+#> [1] TRUE
+~~~
+- `getGenerics()`로 모든 S4 제너릭의 목록을 얻을 수 있고, `getClasses()`로 모든 S4 클래스의 목록을 얻을 수 있음
+- 이 목록은 S3 클래스와 베이스 타입에 대한 shim 클래스도 포함
+- 선택적으로 generic이나 class에 의한 선택을 제한하면서 `showMethods()`으로 모든 S4 메소드를 나열할 수 있음
+- 전역 환경에 사용할 수 있는 메소드에 대한 검색을 제한하기 위해 `where = search()`를 사용하는 것도 좋은 아이디어임
+
+### 7.3.2 클래스를 정의하고 객체 생성하기
+- S3에서는 클래스 속성을 설정하는 것만으로도 어떤 객체를 특별한 클래스의 객체로 바꿀 수 있음
+- S4는 보다 엄격한데, 반드시 `setClass()`로 클래스의 표현을 정의하고, `new()`로 새로운 객체를 생성해야함
+- 예를 들어, `class?mle` 처럼 `class?className`의 특수한 구문으로 특정 클래스에 대한 문서를 찾을 수 있음
+- S4 클래스는 세 가지 핵심적인 성질을 가지고 있음
+  - 이름(name) : alpha-numeric 클래스 식별자. 관행적으로 S4 클래스 이름은 <b>UpperCamelCase</b>를 사용
+  - 슬롯 이름과 허용된 클래스를 정의하는 리스트로 된 <b>슬롯(slots)</b> 또는 <b>필드(fields)</b>. 쉽게 말하면 클래스의 속성을 말함. 예를 들어, 어떤 인물에 대한 클래스는 문자형 이름과 수치형 나이 `list(name = "character", age = "numeric")`처럼 표현할 수 있음
+  - 상속받은 클래스를 전달하는 문자열(S4 용어로 contain 이라고 함). 다중 상속에 다중 클래스를 제공할 수 있지만, 더 복잡한 고급 기법
+- 슬롯과 콘테인에서 S4 클래스, `setOldClass()`로 등록된 S3 클래스, 베이스 타입의 내재 클래스를 사용할 수 있음
+- 슬롯에서 입력을 제한하지 않는 ANY라는 특별한 클래스를 사용할 수 있음
+- S4 클래스는 어떤 객체가 유효한지 검증하는 `validity` 메소드와 기본 슬롯 값을 정의하는 `prototype` 객체처럼 선택적 속성을 갖는다
+- 다음 사례는 필드 이름과 나이로 Person 클래스와 Person을 상속하는 Employee 클래스를 생성
+- Employee 클래스는 Person으로부터 슬롯과 메소드를 상속하고, boss 슬롯을 추가함
+- 객체를 생성하기 위해 클래스 이름과 슬롯 값의 이름-값으로 `new()`를 호출
+~~~r
+setClass("Person",   slots = list(name = "character", age = "numeric"))
+setClass("Employee", slots = list(boss = "Person"), contains = "Person")   #- contain을 통해 Person class 상속    
+
+alice <- new("Person",   name = "Alice", age = 40)
+john  <- new("Employee", name = "John",  age = 20, boss = alice)
+~~~
+- 대부분의 S4 클래스는 클래스와 동일한 이름을 가진 생성자 함수를 포함하고 있음
+- 이 생성자 함수가 이미 존재하고 있으면 `new()`를 직접 호출하지 말고 그 함수를 사용해라
+- S4 객체의 슬롯에 접근하려면 @이나 `slot()`을 사용
+~~~r
+alice@age
+#> [1] 40
+
+slot(john, "boss")
+#> An object of class "Person"
+#> Slot "name":
+#> [1] "Alice"
+
+#> Slot "age":
+#> [1] 40
+~~~
+- S4 객체가 어떤 상속한 S3 클래스나 베이스 타입을 포함하고 있다면, 베이스 타입이나 S3 객체를 포함하는 특별한 .Data 슬롯을 가짐
+~~~r
+setClass("RangedNumeric", contains = "numeric", slots = list(min = "numeric", max = "numeric"))
+rn <- new("RangedNumeric", 1:10, min = 1, max = 10)
+rn@min
+#> [1] 1
+
+rn@.Data
+#> [1] 1 2 3 4 5 6 7 8 9 10
+~~~
+- R은 인터렉티브한 프로그래밍 언어이므로 언제든지 새로운 클래스를 생성하거나 기존의 클래스를 재정의 할 수 있는데, 클래스를 수정하면, 해당 클래스의 객체들을 전부 다 다시 만들어야 함
+- 그렇지 않으면 잘못된 객체가 생성됨
+
+### 7.3.3 새로운 메소드와 제너릭 생성하기
+- S4는 새로운 제너릭 함수와 메소드를 생성하기 위한 특별한 함수 제공
+- `setGeneric()`은 새로운 제너릭을 생성하거나 기존 함수를 제너릭으로 변환
+- `setMethod()`는 제너릭의 이름, 메소드가 연계되어야 할 클래스, 그 메소드를 구현한 함수를 취함
+- 예를 들어, 벡터에만 적용하는 `union()`을 데이터 프레임에 동작하도록 만들 수 있음
+~~~r
+setGeneric("union")
+#> [1] "union"
+
+setMethod("union",
+  c(x = "data.frame", y = "data.frame"),
+  function(x, y){
+    unique(rbind(x, y))
+  }
+)
+#> [1] "union"
+~~~
+- 새로운 제너릭을 처음부터 생성한다면 `standardGeneric()`을 호출하는 함수를 제공할 필요가 있음
+~~~r
+setGeneric("myGeneric" function(x){
+  standardGeneric("myGeneric")
+})
+
+#> [1] "myGeneric"
+~~~
+- `standardGeneric()`은 `UseMethod()`와 동일한 S4임
+
+### 7.3.4 메소드 디스패치
+- 어떤 S4 제너릭이 부모가 하나인 단일 클래스에 디스패치되면 S4 메소드 디스패치는 S3 디스패치와 동일해짐
+- 주된 차이는 기본값을 설정하는 방법
+- 즉 S4는 어떤 클래스에 매칭하기 위한 특별한 클래스인 `ANY`와 결측 인자를 매칭하기 위한 `missing` 클래스를 사용함
+- S4는 S3와 유사하게 그룹 제너릭과 부모 메소드를 호출하기 위한 방법으로 `callNextMethod()`를 가짐
+- 복수의 인자에 디스패치하거나 생성한 클래스가 다중 상속을 사용하면 메소드 디스패치는 상당히 복잡해짐
+- 이 규칙은 `Methods` 도움말에 설명되어 있지만, 매우 복잡하므로 어느 메소드가 호출될지 예측하기 어려움
+- 이런 이유 때문에 절대적인 필요가 있지 않는 이상 다중 상속과 다중 디스패치를 사용하는 것을 가능한 한 피하는 것이 좋음
+- 결과적으로 제너릭 호출의 특징이 주어졌을 때 어느 메소드가 호출될지를 찾는 메소드가 두 개 남게됨
+~~~r
+#- 메소드에서 제너릭 이름과 클래스 이름을 취함
+selectMethod("nobs", list("mle"))
+
+#- pypr에서 비평가된 함수 호출 취함
+method_from_call(nobs(fit))
+~~~
+
+## 7.4 RC
+- <b>참조 클래스(reference class, RC)</b>는 R의 가장 새로운 OO 시스템
+- RC는 S3, S4와 근본적으로 다른데, 다음과 같은 이유 때문
+  - RC 메소드는 함수가 아니라 객체에 속함
+  - RC 객체는 가변적. 즉 일반적인 R의 수정-후-복사 시맨틱스가 적용되지 않음
+- 이런 성질은 RC 객체가 python, Java 등과 같은 다른 프로그래밍 언어에서 동작하는 객체와 유사하게 행동하게 함
+- 참조 클래스는 R 코드를 사용하여 구현됨. 즉 어떤 환경을 래핑하는 특별한 S4 클래스
+
+### 7.4.1 클래스 정의하고 객체 생성하기
+- 베이스 R 패키지에 의해 제공되는 RC는 전무하므로, 하나를 생성하자
+- RC 클래스는 시간에 따라 변환하는 객체인 <b>스테이트풀 객체(stateful objects)</b>를 묘사하는데 사용되므로 은행계좌를 모형화하는 단순한 클래스를 생성해 볼 것임
+- 새로운 RC 클래스를 생성하는 것은 새로운 S4 클래스를 생성하는 것과 유사하지만, `setClass()`대신 `setRefClass()`를 사용
+- 유일하게 필요한 인자는 클래스명
+- 새로운 RC 객체를 생성하기 위해 `use()`를 사용할 수 있지만 새로운 객체를 생성하기 위한 `setRefClass()`에 의해 반환된 객체를 사용하는 것이 좋음
+~~~r
+Account <- setRefClass("Account")
+Account$new()
+
+#> Reference class object of class "Account"
+~~~
+- `setRefClass()`는 필드 클래스를 정의하는 리스트로 된 <b>name-class pairs</b>를 허용
+- `new()`에 전달된 이름 있는 추가 인자는 필드의 초기값을 설정함
+- 필드 값은 $로 얻고, 설정할 수 있음
+~~~r
+Account <- setRefClass("Account", fields = list(balance = "numeric"))
+a <- Account$new(balance = 100)
+a$balance
+#> [1] 100
+
+a$balance <- 200
+a$balance
+#> [1] 200
+~~~
+- 필드에 클래스 이름을 제공하는 대신 <b>접근자 메소드</b>처럼 행동하는 하나의 인자 함수를 제공할 수 있음
+- 이것으로 필드를 얻거나 설정할 때 사용자 정의된 행동을 추가할 수 있음
+- RC 객체가 가변적임을 주의
+- RC 객체는 수정-후-복사 시맨틱스가 아니라 참조 시맨틱스를 가짐
+~~~r
+b <- a
+b$balance
+
+#> [1] 200
+a$balance <- 0
+b$balance
+#> [1] 0 
+~~~
+- 이런 이유로, RC 객체는 객체의 사본을 만들 수 있게 해주는 `copy()`메소드와 같이 사용함
+~~~r
+c <- a$copy()
+c$balance
+#> [1] 0
+
+a$balance <- 100
+c$balance
+#> [1] 0
+~~~
+- 메소드에 의해 행동이 정의되지 않았다면, 객체는 그다지 유용하지 않음
+- RC 메소드는 클래스와 연관되어 있고, 바로 그 필드를 수정할 수 있음
+- 다음 사례에서 그 메소드 이름으로 필드 값에 접근하고 `<<-`로 수정하는 것에 주의해라
+~~~r
+Account <- setRefClass("Account",
+  fields  = list(balance = "numeric"), 
+  methods = list(
+    withdraw = function(x){
+      balance <<- balance - x
+    },
+    deposit = function(x){
+      balance <<- balance + x
+    }
+  ))
+~~~
+- 필드와 접근하는 것과 동일한 방법으로 RC 메소드 호출
+~~~r
+a <- Account$new(balance = 100)
+a$deposit(100)
+a$balance
+
+#> [1] 200
+~~~
+- `setRefClass()`에 마지막으로 남은 중요한 인자는 <b>콘테인</b>임
+- 이것은 메소드들을 상속하기 위한 부모의 RC 클래스의 이름
+- 다음 사례는 0 이하의 잔액을 방지하기 위한 오류를 반환하는 새로운 유형의 은행 계좌
+~~~r
+NoOverdraft <- setRefClass("NoOverdraft",
+  contains = "Account",
+  methods  = list(
+    withdraw = function(x){
+      if (balance < x) stop("Not enough money")
+      balance <<- balance - x
+    }
+  )     
+)
+
+accountJohn <- NoOverdraft$new(balance = 100)
+accountJohn$deposit(50)
+accountJohn$balance
+#> [1] 150
+
+accountJohn$withdraw(200)
+#> Error in accountJohn$withdraw(200) : Not enough money
+~~~
+- 모든 참조 클래스는 결과적으로 `envRefClass()`를 상속함
+- 이 클래스는 앞서 본 `copy()`, 부모필드를 호출하기 위한 `callSuper()`, 주어진 이름에서 필드의 값을 가져오는 `field()`, `as()`와 동등한 `export()`,  그리고 출력을 통제하기 위해 덧쓰는 `show()`를 제공
+- 보다 자세한 내용은 `setRefClass()`에서 상속 부분을 보도록 해라
+
+### 7.4.2 객체와 메소드 인식하기
+- RC 객체는 `refClass(is(x, "refClass"))`를 상속하는 S4 객체이기 때문에 인식할 수 있음
+- `pryr::otype()`은 RC를 반환. RC 메소드는 클래스가 `refMethodDef`인 S4 객체이기도 함
+
+### 7.4.3 메소드 디스패치
+- RC에서 메소드 디스패치가 쉬운 이유는 메소드가 함수가 아니라 클래스와 연관되어 있기 때문
+- `x$f()` 를 호출 할 때 R은 x의 클래스, 그 부모, 그 부모의 부모에서 f 메소드를 계속 찾아 나갈 것임. 
+- 메소드 안에서부터 `callSuper(...)`로 부모 메소드를 직접 호출할 수 있음
+
+## 7.5 시스템 선택 ** 
+- 세가지 OO 시스템은 언어 하나의 대한 것으로는 많은 편이지만, 대부분의 R 프로그래밍은 S3만으로 충분함
+- R에서는 일반적으로 `print()`, `summary()`, 그리고 `plot()`처럼 기존 제너릭 함수들에 대한 매우 단순한 객체와 메소드를 생성함
+- S3는 이런 작업에 적절하므로 R에서 사용했던 OO 코드의 많은 부분이 S3임
+- S3는 다소 독특하지만 최소한의 코드로 작업을 완료할 수 있음
+- 서로 연관이 있는 객체에 쫌 더 복잡한 시스템을 생성한다면 S4가 보다 더 적절함
+- 이에 대한 좋은 예시가 Matrix 패키지와 vignette 패키지임
+- RC는 주류 OO 언어로 프로그래밍을 해왔다면 비교적 이해하기 쉬울 수 있음  
+  하지만 가변 상태(f(a, b)에서 a,b가 객체이므로, 변할 수 있음)를 통한 파급효과를 조심해야 함
+
 ## 용어 정리
 - 디스패치(dispatch)
-  - 프로그램이 어떤 메소드를 호출할 것인가를 결정하여 그것을 실행하는 과정을 말함
+  - 디스패치는 보통 운영체제의 대기 프로세스를 작업 스케줄러에 따라 선택적 우선순위에 따라 실행하는 것을 말하는데, 여기서의 메소드 디스패치는 순차적 동작 방식을 규정하기 위한 방법 정도로 이해할 수 있음
+
+
 - 폴백 메소드(fallback method)
   - 메소드가 클래스에서 호출되었지만 그 메소드가 존재하지 않으면 이에 대응하기 위한  
     일종의 백업 플랜으로 생각하면 됨
